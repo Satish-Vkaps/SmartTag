@@ -11,7 +11,7 @@
  * the readme will list any important changes.
  *
  * @see https://docs.woocommerce.com/document/template-structure/
- * @package WooCommerce\Templates\Emails
+ * @package WooCommerce/Templates/Emails
  * @version 3.7.0
  */
 
@@ -25,8 +25,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 do_action( 'woocommerce_email_header', $email_heading, $email ); ?>
 
 <?php /* translators: %s: Customer first name */ ?>
-<p><?php printf( esc_html__( 'Hi %s,', 'woocommerce' ), esc_html( $order->get_billing_first_name() ) ); ?></p>
-<p><?php esc_html_e( 'We have finished processing your order.', 'woocommerce' ); ?></p>
+<p><?php printf( esc_html__( 'Dear %s,', 'woocommerce' ), esc_html( $order->get_billing_first_name() ) ); ?></p>
+<?php /* translators: %s: Site title */ ?>
+<p><?php esc_html_e( 'Thank you for choosing SmartTag. Your purchase has been successfully completed for the following items(s):', 'woocommerce' ); ?></p>
 <?php
 
 /*
@@ -49,11 +50,15 @@ do_action( 'woocommerce_email_order_meta', $order, $sent_to_admin, $plain_text, 
 do_action( 'woocommerce_email_customer_details', $order, $sent_to_admin, $plain_text, $email );
 
 /**
- * Show user-defined additional content - this is set in each email's settings.
+ * Show user-defined additonal content - this is set in each email's settings.
  */
-if ( $additional_content ) {
-	echo wp_kses_post( wpautop( wptexturize( $additional_content ) ) );
-}
+// if ( $additional_content ) {
+// 	echo wp_kses_post( wpautop( wptexturize( $additional_content ) ) );
+// }
+?>
+<p>If you have any questions about your engraved ID tag order please contact us by sending an email to support@idtag.com or call (888) 379-8880. If you have any questions about your microchip order please email microchip@IDtag.com or call (888) 521-0808 (M-F, 9am-5pm EST).</p> 
+<p>Sincerely, SmartTag Customer Care Department</p>
+<?php 
 
 /*
  * @hooked WC_Emails::email_footer() Output the email footer

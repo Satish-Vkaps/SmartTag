@@ -10,42 +10,43 @@
  * happen. When this occurs the version of the template file will be bumped and
  * the readme will list any important changes.
  *
- * @see https://docs.woocommerce.com/document/template-structure/
- * @package WooCommerce\Templates
- * @version 4.4.0
+ * @see 	    https://docs.woocommerce.com/document/template-structure/
+ * @author 		WooThemes
+ * @package 	WooCommerce/Templates
+ * @version     3.0.0
  */
 
-defined( 'ABSPATH' ) || exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 if ( $cross_sells ) : ?>
+	<div class="acc-grey-box mt-30">
+		<div class="acc-grey-head">
+			Frequently Bought Together
+		</div>
+		<div class="acc-grey-content">
+			<div class="cross-sells">
 
-	<div class="cross-sells">
-		<?php
-		$heading = apply_filters( 'woocommerce_product_cross_sells_products_heading', __( 'You may be interested in&hellip;', 'woocommerce' ) );
+				<?php woocommerce_product_loop_start(); ?>
 
-		if ( $heading ) :
-			?>
-			<h2><?php echo esc_html( $heading ); ?></h2>
-		<?php endif; ?>
+					<?php foreach ( $cross_sells as $cross_sell ) : ?>
 
-		<?php woocommerce_product_loop_start(); ?>
+						<?php
+						 	$post_object = get_post( $cross_sell->get_id() );
 
-			<?php foreach ( $cross_sells as $cross_sell ) : ?>
+							setup_postdata( $GLOBALS['post'] =& $post_object );
 
-				<?php
-					$post_object = get_post( $cross_sell->get_id() );
+							wc_get_template_part( 'content', 'product' ); ?>
 
-					setup_postdata( $GLOBALS['post'] =& $post_object ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited, Squiz.PHP.DisallowMultipleAssignments.Found
+					<?php endforeach; ?>
 
-					wc_get_template_part( 'content', 'product' );
-				?>
+				<?php woocommerce_product_loop_end(); ?>
 
-			<?php endforeach; ?>
-
-		<?php woocommerce_product_loop_end(); ?>
-
+			</div>
+		</div>
 	</div>
-	<?php
-endif;
+
+<?php endif;
 
 wp_reset_postdata();

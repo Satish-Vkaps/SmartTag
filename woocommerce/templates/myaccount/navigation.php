@@ -11,7 +11,8 @@
  * the readme will list any important changes.
  *
  * @see     https://docs.woocommerce.com/document/template-structure/
- * @package WooCommerce\Templates
+ * @author  WooThemes
+ * @package WooCommerce/Templates
  * @version 2.6.0
  */
 
@@ -23,6 +24,7 @@ do_action( 'woocommerce_before_account_navigation' );
 ?>
 
 <nav class="woocommerce-MyAccount-navigation">
+	<h3>My Account</h3>
 	<ul>
 		<?php foreach ( wc_get_account_menu_items() as $endpoint => $label ) : ?>
 			<li class="<?php echo wc_get_account_menu_item_classes( $endpoint ); ?>">
@@ -30,6 +32,9 @@ do_action( 'woocommerce_before_account_navigation' );
 			</li>
 		<?php endforeach; ?>
 	</ul>
+	<div class="my-account-sidebar mt-15 text-center">
+		<?php echo do_shortcode("[stag_sidebar id='main-sidebar']"); ?>
+	</div>
 </nav>
 
 <?php do_action( 'woocommerce_after_account_navigation' ); ?>

@@ -11,19 +11,19 @@
  * the readme will list any important changes.
  *
  * @see https://docs.woocommerce.com/document/template-structure/
- * @package WooCommerce\Templates
+ * @package WooCommerce/Templates
  * @version 3.4.4
  */
 
 defined( 'ABSPATH' ) || exit;
 
-if ( ! wc_coupons_enabled() ) { // @codingStandardsIgnoreLine.
+if ( ! wc_coupons_enabled()) { // @codingStandardsIgnoreLine.
 	return;
 }
 
 ?>
 <div class="woocommerce-form-coupon-toggle">
-	<?php wc_print_notice( apply_filters( 'woocommerce_checkout_coupon_message', esc_html__( 'Have a coupon?', 'woocommerce' ) . ' <a href="#" class="showcoupon">' . esc_html__( 'Click here to enter your code', 'woocommerce' ) . '</a>' ), 'notice' ); ?>
+	<?php wc_print_notice( apply_filters( 'woocommerce_checkout_coupon_message', __( 'Have a coupon?', 'woocommerce' ) . ' <a href="#" class="showcoupon">' . __( 'Click here to enter your code', 'woocommerce' ) . '</a>' ), 'notice' ); ?>
 </div>
 
 <form class="checkout_coupon woocommerce-form-coupon" method="post" style="display:none">
@@ -40,3 +40,19 @@ if ( ! wc_coupons_enabled() ) { // @codingStandardsIgnoreLine.
 
 	<div class="clear"></div>
 </form>
+
+<?php if (!is_user_logged_in()){
+	$info_message = '<a href="#" class="showcheckout">' . __( ' Create your account & complete your order here ', 'woocommerce' ) . '<i class="fa fa-caret-down"></i></a>';
+	wc_print_notice( $info_message, 'notice' );
+	echo '<style>form.woocommerce-checkout{display:none;}</style><script type="text/javascript">
+	jQuery(document).ready(function(){
+		jQuery("body").on("click","a.showcheckout",function(){
+			jQuery("form.woocommerce-checkout").slideToggle();
+			return false;
+		});
+		var createPassword = jQuery(".woocommerce-account-fields .create-account p").clone().addClass("form-row-wide").end();
+		jQuery(".woocommerce-account-fields .create-account p").parent().parent().remove();
+		jQuery(".woocommerce-billing-fields .woocommerce-billing-fields__field-wrapper").append(createPassword);
+	});
+</script>';
+} ?>

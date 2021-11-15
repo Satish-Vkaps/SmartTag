@@ -10,75 +10,801 @@
  * happen. When this occurs the version of the template file will be bumped and
  * the readme will list any important changes.
  *
- * @see https://docs.woocommerce.com/document/template-structure/
- * @package WooCommerce\Templates
- * @version 3.5.5
+ * @see 	https://docs.woocommerce.com/document/template-structure/
+ * @author  WooThemes
+ * @package WooCommerce/Templates
+ * @version 3.0.0
  */
-
-defined( 'ABSPATH' ) || exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 global $product;
 
-$attribute_keys  = array_keys( $attributes );
-$variations_json = wp_json_encode( $available_variations );
-$variations_attr = function_exists( 'wc_esc_json' ) ? wc_esc_json( $variations_json ) : _wp_specialchars( $variations_json, ENT_QUOTES, 'UTF-8', true );
+$attribute_keys = array_keys( $attributes );
 
 do_action( 'woocommerce_before_add_to_cart_form' ); ?>
-
-<form class="variations_form cart" action="<?php echo esc_url( apply_filters( 'woocommerce_add_to_cart_form_action', $product->get_permalink() ) ); ?>" method="post" enctype='multipart/form-data' data-product_id="<?php echo absint( $product->get_id() ); ?>" data-product_variations="<?php echo $variations_attr; // WPCS: XSS ok. ?>">
+<form class="variations_form cart" method="post" enctype='multipart/form-data' data-product_id="<?php echo absint( $product->get_id() ); ?>" data-product_variations="<?php echo htmlspecialchars( wp_json_encode( $available_variations ) ) ?>">
 	<?php do_action( 'woocommerce_before_variations_form' ); ?>
 
 	<?php if ( empty( $available_variations ) && false !== $available_variations ) : ?>
-		<p class="stock out-of-stock"><?php echo esc_html( apply_filters( 'woocommerce_out_of_stock_message', __( 'This product is currently out of stock and unavailable.', 'woocommerce' ) ) ); ?></p>
+		<p class="stock out-of-stock"><?php _e( 'This product is currently out of stock and unavailable.', 'woocommerce' ); ?></p>
 	<?php else : ?>
 		<table class="variations" cellspacing="0">
 			<tbody>
 				<?php foreach ( $attributes as $attribute_name => $options ) : ?>
-					<tr>
-						<td class="label"><label for="<?php echo esc_attr( sanitize_title( $attribute_name ) ); ?>"><?php echo wc_attribute_label( $attribute_name ); // WPCS: XSS ok. ?></label></td>
+					<tr class="<?php echo sanitize_title( $attribute_name ); ?>">
+						<td class="label"><label for="<?php echo sanitize_title( $attribute_name ); ?>"><?php echo wc_attribute_label( $attribute_name ); ?></label></td>
 						<td class="value">
 							<?php
-								wc_dropdown_variation_attribute_options(
-									array(
-										'options'   => $options,
-										'attribute' => $attribute_name,
-										'product'   => $product,
-									)
-								);
-								echo end( $attribute_keys ) === $attribute_name ? wp_kses_post( apply_filters( 'woocommerce_reset_variations_link', '<a class="reset_variations" href="#">' . esc_html__( 'Clear', 'woocommerce' ) . '</a>' ) ) : '';
+								$selected = isset( $_REQUEST[ 'attribute_' . sanitize_title( $attribute_name ) ] ) ? wc_clean( stripslashes( urldecode( $_REQUEST[ 'attribute_' . sanitize_title( $attribute_name ) ] ) ) ) : $product->get_variation_default_attribute( $attribute_name );
+								wc_dropdown_variation_attribute_options( array( 'options' => $options, 'attribute' => $attribute_name, 'product' => $product, 'selected' => $selected ) );
+								echo end( $attribute_keys ) === $attribute_name ? apply_filters( 'woocommerce_reset_variations_link', '<a class="reset_variations custom-reset-variation" href="#">' . esc_html__( 'Clear', 'woocommerce' ) . '</a>' ) : '';
 							?>
 						</td>
 					</tr>
-				<?php endforeach; ?>
+				<?php endforeach;?>
 			</tbody>
 		</table>
-
-		<div class="single_variation_wrap">
-			<?php
-				/**
-				 * Hook: woocommerce_before_single_variation.
-				 */
-				do_action( 'woocommerce_before_single_variation' );
-
-				/**
-				 * Hook: woocommerce_single_variation. Used to output the cart button and placeholder for variation data.
-				 *
-				 * @since 2.4.0
-				 * @hooked woocommerce_single_variation - 10 Empty div for variation data.
-				 * @hooked woocommerce_single_variation_add_to_cart_button - 20 Qty and cart button.
-				 */
-				do_action( 'woocommerce_single_variation' );
-
-				/**
-				 * Hook: woocommerce_after_single_variation.
-				 */
-				do_action( 'woocommerce_after_single_variation' );
-			?>
-		</div>
+		<?php $form = false; ?>
+		<?php do_action( 'woocommerce_before_add_to_cart_button' ); ?>
+		<?php do_action( 'woocommerce_after_add_to_cart_button' ); ?>
 	<?php endif; ?>
 
 	<?php do_action( 'woocommerce_after_variations_form' ); ?>
 </form>
+<script type="text/javascript">
+	jQuery(document).ready(function(){
+		jQuery("select#pa_size option[value='small']").attr("selected", "selected");
+		jQuery("#picker_pa_size .variation-custom-radio div").removeClass('active');
+		jQuery("#picker_pa_size .variation-custom-radio div").removeClass('inactive');
+		jQuery("#picker_pa_size .variation-custom-radio div").addClass('inactive');
+		jQuery("#picker_pa_size .variation-custom-radio-wrap .variation-custom-radio div").each(function(){
+			var value = jQuery(this).children('input').val();
+			if (value == 'large') {
+				jQuery(this).addClass('active');
+			}
+		});
+		jQuery('#pa_shape').change(function(){ 
+			var value = jQuery('#picker_pa_shape div.select-option.selected a').attr('title');
+			jQuery("div.woo-complex-prod-variants span.shape").text(value);
+		});
+		jQuery('#pa_color').change(function(){ 
+			var value = jQuery('#picker_pa_color div.select-option.selected a').attr('title');
+			jQuery("div.woo-complex-prod-variants span.color").text(value);
+		});
+		jQuery('#pa_size').change(function(){ 
+			var value = jQuery(this).val();
+			jQuery("div.woo-complex-prod-variants span.size").text(value);
+		});
+		jQuery('#pa_ttype').change(function(){ 
+			var value = jQuery('#picker_pa_ttype div.select-option.selected a').attr('title');
+			jQuery("div.woo-complex-prod-variants span.type").text(value);
+		});
+		jQuery('#pa_style').change(function(){ 
+			var value = jQuery('#picker_pa_style div.select-option.selected a').attr('title');
+			console.log("rohit value",value);
+			jQuery("div.woo-complex-prod-variants span.style").text(value);
+		});
 
+		jQuery("select#pa_size").next("ul").find("input").each(function(){
+			if(jQuery(this).val() == 'small'){
+				jQuery(this).prop("checked",true).trigger("change");
+				return;
+			}
+		})
+	});
+		
+</script>
+<?php 
+if (isset($_POST['petName'])) { ?>
+	<script type="text/javascript">
+		jQuery(document).ready(function(){
+			jQuery(".select-option.swatch-wrapper").removeClass("selected");
+			jQuery("select#pa_ttype option[value='<?php echo $_POST["type"]; ?>']").prop("selected", true).change();
+			jQuery(".select-option.swatch-wrapper[data-value='<?php echo $_POST["type"]; ?>").addClass('selected');
+			jQuery(".front_line1").text('<?php echo $_POST['petName']; ?>');
+			jQuery("#engraving_back_line_1").val('<?php echo $_POST['petName']; ?>');
+			var type = jQuery("#picker_pa_ttype .select-option.swatch-wrapper.selected").attr('data-value');
+			console.log("Gaurav", type);
+			if (type == "heart") {
+				jQuery(".show_img img").attr('src','https://prelaunch.idtag.com/wp-content/themes/salient-child/images/back/pink-heart-back.png');
+				jQuery(".show_img img.front_img").attr('src','https://prelaunch.idtag.com/wp-content/themes/salient-child/images/back/pink-heart-back.png');
+			} else if(type == "circle"){
+				jQuery(".show_img img").attr('src','https://idtag.agiliscloud.com/wp-content/themes/salient-child/images/back/blue-circle-back.png');
+				jQuery(".show_img img.front_img").attr('src','https://idtag.agiliscloud.com/wp-content/themes/salient-child/images/back/blue-circle-back.png');
+			} else if(type == "bone"){
+				jQuery(".show_img img").attr('src','https://idtag.agiliscloud.com/wp-content/themes/salient-child/images/back/black-bone-back.png');
+				jQuery(".show_img img.front_img").attr('src','https://idtag.agiliscloud.com/wp-content/themes/salient-child/images/back/black-bone-back.png');
+			}
+		});
+	</script>
+<?php }
+if (isset($_POST['color'])) { ?>
+	<script type="text/javascript">
+		jQuery(document).ready(function(){
+			jQuery(".select-option.swatch-wrapper").removeClass("selected");
+
+			jQuery("select#pa_color option[value='<?php echo $_POST["color"]; ?>']").attr("selected", "selected");
+			jQuery(".select-option.swatch-wrapper[data-value='<?php echo $_POST["color"]; ?>").addClass('selected');
+
+			jQuery("select#pa_shape option[value='<?php echo $_POST["type"]; ?>']").attr("selected", "selected");
+			jQuery(".select-option.swatch-wrapper[data-value='<?php echo $_POST["type"]; ?>").addClass('selected');
+
+			jQuery("select#pa_size option[value='<?php echo $_POST["size"]; ?>']").attr("selected", "selected");
+			jQuery("#picker_pa_size .variation-custom-radio div").removeClass('active');
+			jQuery("#picker_pa_size .variation-custom-radio div").removeClass('inactive');
+			jQuery("#picker_pa_size .variation-custom-radio div").addClass('inactive');
+			jQuery("#picker_pa_size .variation-custom-radio-wrap .variation-custom-radio div").each(function(){
+				var value = jQuery(this).children('input').val();
+				if (value == '<?php echo $_POST["size"]; ?>') {
+					jQuery(this).addClass('active');
+				}
+			});
+
+			jQuery("select#pa_size").next("ul").find("input").each(function(){
+				if (jQuery(this).val() == '<?php echo $_POST["size"]; ?>') {
+					jQuery(this).prop("checked",true).trigger("click");
+					return;
+				}
+			})
+			
+		});
+	</script>
+<?php } else if(isset($_POST['style'])){?>
+	<script type="text/javascript">
+		jQuery(document).ready(function(){
+			jQuery(".select-option.swatch-wrapper").removeClass("selected");
+
+			jQuery("select#pa_style").find("option[value='<?php echo $_POST["style"]; ?>']").prop("selected", true).trigger("change");
+			jQuery(".select-option.swatch-wrapper[data-value='<?php echo $_POST["style"]; ?>").addClass('selected');
+
+			jQuery("select#pa_ttype option[value='<?php echo $_POST["type"]; ?>']").attr("selected", "selected");
+			jQuery(".select-option.swatch-wrapper[data-value='<?php echo $_POST["type"]; ?>']").addClass('selected');
+
+			jQuery("select#pa_size option[value='<?php echo $_POST["size"]; ?>']").attr("selected", "selected");
+			jQuery("#picker_pa_size .variation-custom-radio div").removeClass('active');
+			jQuery("#picker_pa_size .variation-custom-radio div").removeClass('inactive');
+			jQuery("#picker_pa_size .variation-custom-radio div").addClass('inactive');
+			jQuery("#picker_pa_size .variation-custom-radio-wrap .variation-custom-radio div").each(function(){
+				var value = jQuery(this).children('input').val();
+				if (value == '<?php echo $_POST["size"]; ?>') {
+					jQuery(this).addClass('active');
+				}
+			});
+			jQuery("select#pa_size").next("ul").find("input").each(function(){
+				if (jQuery(this).val() == '<?php echo $_POST["size"]; ?>') {
+					jQuery(this).prop("checked",true).trigger("click");
+					return;
+				}
+			})
+		});
+	</script>
+<?php } else{ ?>
+	<script type="text/javascript">
+		var image = jQuery(".variations [data-attribute_name=attribute_pa_style] span.swatch-image img").attr('src');
+		jQuery(".show_img img").attr('src',image);
+	</script>
+<?php } ?>
+<style type="text/css">
+	/*.show_img p.front_line1,.show_img p.front_line2,.show_img p.front_line3,.show_img p.front_line4{
+		height: 102px;
+	    left: 30px;
+	    overflow: hidden;
+	    padding-top: 2px;
+	    position: absolute;
+	    width: 200px;
+	    text-align: center;
+	    white-space: nowrap;
+	    color: #fff;
+	
+}
+.show_img p.back_line1,.show_img p.back_line2,.show_img p.back_line3,.show_img p.back_line4{
+	height: 102px;
+    left: 20px;
+    overflow: hidden;
+    padding-top: 2px;
+    position: absolute;
+    width: 200px;
+    text-align: center;
+    white-space: nowrap;
+    color: #fff;
+}
+.woo-complex-custom-prod-lines{
+	top: 25px;
+	position: absolute;
+}*/
+</style>
+ 	<script>
+ 	jQuery(document).ready(function(){
+
+/* Aluminum-ID-Tag and Brass-ID-Tag Status Front Text/Back Text : Completed/Not Completed */
+		jQuery('.front-text-shwhde').hide();
+		jQuery('.back-text-shwhde').hide();
+		jQuery('.text-status').text('Not Completed');
+
+		jQuery("#pa_style").on("change", function(){
+			var style = jQuery(this).val();
+
+			if(style == 'bone-7'){
+				jQuery('.front-text-shwhde').show();
+				jQuery('.back-text-shwhde').show();
+				jQuery('.text-shwhde').hide();
+			}else if(style == 'circle-7'){
+				jQuery('.front-text-shwhde').show();
+				jQuery('.back-text-shwhde').show();
+				jQuery('.text-shwhde').hide();
+			}else if(style == 'heart-1'){
+				jQuery('.front-text-shwhde').show();
+				jQuery('.back-text-shwhde').show();
+				jQuery('.text-shwhde').hide();
+			}else{
+				jQuery('.front-text-shwhde').hide();
+				jQuery('.back-text-shwhde').hide();
+				jQuery('.text-shwhde').show();
+			}
+		});
+
+		jQuery('.front-text-status').text('Not Completed');
+		jQuery('.back-text-status').text('Not Completed');
+		
+
+ 		jQuery('.front-line').keyup(function() { 
+        	var lineVal1 = jQuery('#engraving_front_line_1').val();
+        	var lineVal2 = jQuery('#engraving_front_line_2').val();
+        	var lineVal3 = jQuery('#engraving_front_line_3').val();
+        	var lineVal4 = jQuery('#engraving_front_line_4').val();
+
+        	if (lineVal1 == '' && lineVal2 == '' && lineVal3 == '' && lineVal4 == '') {
+        		jQuery('.front-text-status').text('Not Completed');
+   	     	}else{
+        		jQuery('.front-text-status').text('Completed');	
+        	}
+        });
+
+        jQuery('.back-line').keyup(function() {
+        	var lineVal1 = jQuery('#engraving_back_line_1').val();
+        	var lineVal2 = jQuery('#engraving_back_line_2').val();
+        	var lineVal3 = jQuery('#engraving_back_line_3').val();
+        	var lineVal4 = jQuery('#engraving_back_line_4').val();
+        	if (lineVal1 == '' && lineVal2 == '' && lineVal3 == '' && lineVal4 == '') {
+        		jQuery('.back-text-status').text('Not Completed');
+        		jQuery('.text-status').text('Not Completed');
+   	     	}else{
+        		jQuery('.back-text-status').text('Completed');	
+        		jQuery('.text-status').text('Completed');	
+        	}
+        });
+
+        /*jQuery('#engraving_front_line_1').keyup(function() { 
+        	var line1 = jQuery(this).val();
+        	jQuery(".show_img p.front_line1").text(line1);
+        	jQuery(".show_img p.front_line1").css({
+        	'color': '#fff',
+			'top': '104px',
+    		'width': '200px',
+    		
+    		'font-size': '57px',
+    		'line-height': '42.5px'});
+        });
+        jQuery('#engraving_front_line_2').keyup(function() { 
+        	var line2 = jQuery(this).val();
+        	jQuery(".show_img p.front_line2").text(line2);
+        	if(line2 !=''){
+	        	jQuery(".show_img p.front_line1").css({
+	        	'color': '#fff',
+				'top': '87px',
+	    		'font-size': '50px'
+	    		});
+
+	    		jQuery(".show_img p.front_line2").css({
+				'top': '130px',
+	    		'font-size': '40px'
+	    		});
+	    	}else{
+	    		jQuery(".show_img p.front_line1").css({
+	        	'color': '#fff',
+				'top': '104px',
+	    		'width': '200px',
+	    		
+	    		'font-size': '57px',
+	    		'line-height': '42.5px'});
+		    }
+
+        });
+		jQuery('#engraving_front_line_3').keyup(function() { 
+        	var line3 = jQuery(this).val();
+        	jQuery(".show_img p.front_line3").text(line3);
+        	if(line3 !=''){
+	        	jQuery(".show_img p.front_line1").css({
+	        	'color': '#fff',
+				'top': '80px',
+	    		'font-size': '40px'
+	    		});
+
+	    		jQuery(".show_img p.front_line2").css({
+	    		'color': '#fff',
+				'top': '110px',
+	    		'font-size': '35px'
+	    		});
+	    		jQuery(".show_img p.front_line3").css({
+	    		'color': '#fff',
+				'top': '145px',
+	    		'font-size': '30px'
+	    		});
+    		}else{
+    			jQuery(".show_img p.front_line1").css({
+	        	'color': '#fff',
+				'top': '87px',
+	    		'font-size': '50px'
+	    		});
+
+	    		jQuery(".show_img p.front_line2").css({
+				'top': '130px',
+	    		'font-size': '40px'
+	    		});	
+    		}
+        });
+        jQuery('#engraving_front_line_4').keyup(function() { 
+        	var line4 = jQuery(this).val();
+        	jQuery(".show_img p.front_line4").text(line4);
+        	if(line4 !=''){
+	        	jQuery(".show_img p.front_line1").css({
+	        	'color': '#fff',
+				'top': '75px',
+	    		'font-size': '35px'
+	    		});
+
+	    		jQuery(".show_img p.front_line2").css({
+	    		'color': '#fff',
+				'top': '105px',
+	    		'font-size': '30px'
+	    		});
+	    		jQuery(".show_img p.front_line3").css({
+	    		'color': '#fff',
+				'top': '135px',
+	    		'font-size': '25px'
+	    		});
+	    		jQuery(".show_img p.front_line4").css({
+	    		'color': '#fff',
+				'top': '160px',
+	    		'font-size': '20px'
+	    		});
+	    	}else{
+	    		jQuery(".show_img p.front_line1").css({
+	        	'color': '#fff',
+				'top': '80px',
+	    		'font-size': '40px'
+	    		});
+
+	    		jQuery(".show_img p.front_line2").css({
+	    		'color': '#fff',
+				'top': '110px',
+	    		'font-size': '35px'
+	    		});
+	    		jQuery(".show_img p.front_line3").css({
+	    		'color': '#fff',
+				'top': '145px',
+	    		'font-size': '30px'
+	    		});
+	    	}
+        });*/
+        
+	    jQuery("#engraving_back_line_1").keyup(function() { 
+        	var line1 = jQuery(this).val();
+        	jQuery('.show_img p.back_line1').text(line1);
+        	//var textLenght = jQuery(line1).length;
+		    if (line1.length > 5 && line1.length < 8 ) {
+	            jQuery('p.back_line1').css('font-size', '34px');
+	        } else if (line1.length > 7 && line1.length < 10 ) {
+	            jQuery('p.back_line1').css('font-size', '28px');
+	        } else if (line1.length > 9 && line1.length < 12) {
+	            jQuery('p.back_line1').css('font-size', '22px');
+	        } else if (line1.length > 11 && line1.length < 16) {
+	            jQuery('p.back_line1').css('font-size', '16px');
+	        } else if (line1.length > 15 && line1.length < 21) {
+	            jQuery('p.back_line1').css('font-size', '12px');
+	        } else {
+	        	jQuery('p.back_line1').css('font-size', '44px');
+	        }
+	     });
+	    jQuery("#engraving_back_line_2").keyup(function() { 
+        	var line2 = jQuery(this).val();
+        	jQuery(".show_img p.back_line2").text(line2);
+		    if (line2.length > 5 && line2.length < 8 ) {
+	            jQuery('p.back_line2').css('font-size', '34px');
+	        } else if (line2.length > 7 && line2.length < 10 ) {
+	            jQuery('p.back_line2').css('font-size', '28px');
+	        } else if (line2.length > 9 && line2.length < 12) {
+	            jQuery('p.back_line2').css('font-size', '22px');
+	        } else if (line2.length > 11 && line2.length < 16) {
+	            jQuery('p.back_line2').css('font-size', '16px');
+	        } else if (line2.length > 15 && line2.length < 21) {
+	            jQuery('p.back_line2').css('font-size', '12px');
+	        } else {
+	        	jQuery('p.back_line2').css('font-size', '44px');
+	        }
+	     });
+	    jQuery("#engraving_back_line_3").keyup(function() { 
+        	var line3 = jQuery(this).val();
+        	jQuery(".show_img p.back_line3").text(line3);
+        	if (line3.length > 0 && line3.length < 9 ) {
+        		jQuery('p.back_line1').css('font-size', '22px');
+        		jQuery('p.back_line2').css('font-size', '22px');
+	            jQuery('p.back_line3').css('font-size', '22px');
+	        } else if (line3.length > 8 && line3.length < 13) {
+	            jQuery('p.back_line1').css('font-size', '16px');
+        		jQuery('p.back_line2').css('font-size', '16px');
+	            jQuery('p.back_line3').css('font-size', '16px');
+	        } else if (line3.length > 12 && line3.length < 17) {
+	            /*jQuery('p.back_line1').css('font-size', '16px');
+        		jQuery('p.back_line2').css('font-size', '16px');*/
+	            jQuery('p.back_line3').css('font-size', '12px');
+	        } else if (line3.length > 16 && line3.length < 21) {
+	            /*jQuery('p.back_line1').css('font-size', '14px');
+        		jQuery('p.back_line2').css('font-size', '14px');*/
+	            jQuery('p.back_line3').css('font-size', '12px');
+	        } else {
+	        	jQuery('p.back_line3').css('font-size', '22px');
+	        }
+	     });
+	    jQuery("#engraving_back_line_4").keyup(function() { 
+	    	var line4 = jQuery(this).val();
+        	jQuery(".show_img p.back_line4").text(line4);
+        	if (line4.length > 0 && line4.length < 9 ) {
+        		jQuery('p.back_line1').css('font-size', '18px');
+        		jQuery('p.back_line2').css('font-size', '18px');
+	            jQuery('p.back_line3').css('font-size', '18px');
+	            jQuery('p.back_line4').css('font-size', '18px');
+	        } else if (line4.length > 8 && line4.length < 13) {
+	        	jQuery('p.back_line1').css('font-size', '16px');
+        		jQuery('p.back_line2').css('font-size', '16px');
+	            jQuery('p.back_line3').css('font-size', '14px');
+	            jQuery('p.back_line4').css('font-size', '14px');
+	        } else if (line4.length > 12 && line4.length < 17) {
+	            jQuery('p.back_line3').css('font-size', '14px');
+	            jQuery('p.back_line4').css('font-size', '12px');
+	        } else if (line4.length > 16 && line4.length < 21) {
+	            jQuery('p.back_line3').css('font-size', '12px');
+	            jQuery('p.back_line4').css('font-size', '10px');
+	        } else {
+	        	jQuery('p.back_line3').css('font-size', '20px');
+	        }
+	     });
+	    
+	    	
+	    /*Front keyup js*/
+	    jQuery("#engraving_front_line_1").keyup(function() { 
+	var frontline1 = jQuery(this).val();
+	jQuery('.show_img p.front_line1').text(frontline1);
+	//var textLenght = jQuery(line1).length;
+    if (frontline1.length > 5 && frontline1.length < 8 ) {
+        jQuery('p.front_line1').css('font-size', '34px');
+    } else if (frontline1.length > 7 && frontline1.length < 10 ) {
+        jQuery('p.front_line1').css('font-size', '28px');
+    } else if (frontline1.length > 9 && frontline1.length < 12) {
+        jQuery('p.front_line1').css('font-size', '22px');
+    } else if (frontline1.length > 11 && frontline1.length < 16) {
+        jQuery('p.front_line1').css('font-size', '16px');
+    } else if (frontline1.length > 15 && frontline1.length < 21) {
+        jQuery('p.front_line1').css('font-size', '12px');
+    } else {
+    	jQuery('p.front_line1').css('font-size', '44px');
+    }
+ });
+jQuery("#engraving_front_line_2").keyup(function() { 
+	var frontline2 = jQuery(this).val();
+	jQuery(".show_img p.front_line2").text(frontline2);
+    if (frontline2.length > 5 && frontline2.length < 8 ) {
+        jQuery('p.front_line2').css('font-size', '34px');
+    } else if (frontline2.length > 7 && frontline2.length < 10 ) {
+        jQuery('p.front_line2').css('font-size', '28px');
+    } else if (frontline2.length > 9 && frontline2.length < 12) {
+        jQuery('p.front_line2').css('font-size', '22px');
+    } else if (frontline2.length > 11 && frontline2.length < 16) {
+        jQuery('p.front_line2').css('font-size', '16px');
+    } else if (frontline2.length > 15 && frontline2.length < 21) {
+        jQuery('p.front_line2').css('font-size', '12px');
+    } else {
+    	jQuery('p.front_line2').css('font-size', '44px');
+    }
+ });
+jQuery("#engraving_front_line_3").keyup(function() { 
+	var frontline3 = jQuery(this).val();
+	jQuery(".show_img p.front_line3").text(frontline3);
+	if (frontline3.length > 0 && frontline3.length < 9 ) {
+		jQuery('p.front_line1').css('font-size', '22px');
+		jQuery('p.front_line2').css('font-size', '22px');
+        jQuery('p.front_line3').css('font-size', '22px');
+    } else if (frontline3.length > 8 && frontline3.length < 13) {
+        jQuery('p.front_line1').css('font-size', '16px');
+		jQuery('p.front_line2').css('font-size', '16px');
+        jQuery('p.front_line3').css('font-size', '16px');
+    } else if (frontline3.length > 12 && frontline3.length < 17) {
+        /*jQuery('p.front_line1').css('font-size', '16px');
+		jQuery('p.front_line2').css('font-size', '16px');*/
+        jQuery('p.front_line3').css('font-size', '12px');
+    } else if (frontline3.length > 16 && frontline3.length < 21) {
+        /*jQuery('p.front_line1').css('font-size', '14px');
+		jQuery('p.front_line2').css('font-size', '14px');*/
+        jQuery('p.front_line3').css('font-size', '12px');
+    } else {
+    	jQuery('p.front_line3').css('font-size', '22px');
+    }
+ });
+jQuery("#engraving_front_line_4").keyup(function() { 
+	var frontline4 = jQuery(this).val();
+	jQuery(".show_img p.front_line4").text(frontline4);
+	if (frontline4.length > 0 && frontline4.length < 9 ) {
+		jQuery('p.front_line1').css('font-size', '18px');
+		jQuery('p.front_line2').css('font-size', '18px');
+        jQuery('p.front_line3').css('font-size', '18px');
+        jQuery('p.front_line4').css('font-size', '18px');
+    } else if (frontline4.length > 8 && frontline4.length < 13) {
+    	jQuery('p.front_line1').css('font-size', '16px');
+		jQuery('p.front_line2').css('font-size', '16px');
+        jQuery('p.front_line3').css('font-size', '14px');
+        jQuery('p.front_line4').css('font-size', '14px');
+    } else if (frontline4.length > 12 && frontline4.length < 17) {
+        jQuery('p.front_line3').css('font-size', '14px');
+        jQuery('p.front_line4').css('font-size', '12px');
+    } else if (frontline4.length > 16 && frontline4.length < 21) {
+        jQuery('p.front_line3').css('font-size', '12px');
+        jQuery('p.front_line4').css('font-size', '10px');
+    } else {
+    	jQuery('p.front_line3').css('font-size', '20px');
+    }
+ });
+
+
+
+	    /*jQuery("#engraving_back_line_1").keyup(function() { 
+        	var line1 = jQuery(this).val();
+        	jQuery(".show_img p.back_line1").text(line1);
+	        	jQuery(".show_img p.back_line_text").css({
+		        	'color': '#fff',
+					'top': '104px',
+		    		'width': '200px',
+		    		'font-size': '57px',
+		    		'line-height': '42.5px'
+		    	});
+	     });*/
+        /*jQuery('#engraving_back_line_2').keyup(function() { 
+        	var line2 = jQuery(this).val();
+        	jQuery(".show_img p.back_line2").text(line2);
+        	if(line2 !=''){
+	        	jQuery(".show_img p.back_line1").css({
+	        	'color': '#fff',
+				'top': '87px',
+	    		'font-size': '50px'
+	    		});
+
+	    		jQuery(".show_img p.back_line2").css({
+				'top': '130px',
+	    		'font-size': '40px'
+	    		});
+	    	}else{
+	    		jQuery(".show_img p.back_line1").css({
+	        	'color': '#fff',
+				'top': '104px',
+	    		'width': '200px',
+	    		'font-size': '57px',
+	    		'line-height': '42.5px'});
+		    }
+
+        });
+		jQuery('#engraving_back_line_3').keyup(function() { 
+        	var line3 = jQuery(this).val();
+        	jQuery(".show_img p.back_line3").text(line3);
+        	if(line3 !=''){
+	        	jQuery(".show_img p.back_line1").css({
+	        	'color': '#fff',
+				'top': '80px',
+	    		'font-size': '40px'
+	    		});
+
+	    		jQuery(".show_img p.back_line2").css({
+	    		'color': '#fff',
+				'top': '110px',
+	    		'font-size': '35px'
+	    		});
+	    		jQuery(".show_img p.back_line3").css({
+	    		'color': '#fff',
+				'top': '145px',
+	    		'font-size': '30px'
+	    		});
+    		}else{
+    			jQuery(".show_img p.back_line1").css({
+	        	'color': '#fff',
+				'top': '87px',
+	    		'font-size': '50px'
+	    		});
+
+	    		jQuery(".show_img p.back_line2").css({
+				'top': '130px',
+	    		'font-size': '40px'
+	    		});	
+    		}
+        });
+        jQuery('#engraving_back_line_4').keyup(function() { 
+        	var line4 = jQuery(this).val();
+        	jQuery(".show_img p.back_line4").text(line4);
+        	if(line4 !=''){
+	        	jQuery(".show_img p.back_line1").css({
+	        	'color': '#fff',
+				'top': '75px',
+	    		'font-size': '35px'
+	    		});
+
+	    		jQuery(".show_img p.back_line2").css({
+	    		'color': '#fff',
+				'top': '105px',
+	    		'font-size': '30px'
+	    		});
+	    		jQuery(".show_img p.back_line3").css({
+	    		'color': '#fff',
+				'top': '135px',
+	    		'font-size': '25px'
+	    		});
+	    		jQuery(".show_img p.back_line4").css({
+	    		'color': '#fff',
+				'top': '160px',
+	    		'font-size': '20px'
+	    		});
+	    	}else{
+	    		jQuery(".show_img p.back_line1").css({
+	        	'color': '#fff',
+				'top': '80px',
+	    		'font-size': '40px'
+	    		});
+
+	    		jQuery(".show_img p.back_line2").css({
+	    		'color': '#fff',
+				'top': '110px',
+	    		'font-size': '35px'
+	    		});
+	    		jQuery(".show_img p.back_line3").css({
+	    		'color': '#fff',
+				'top': '145px',
+	    		'font-size': '30px'
+	    		});
+	    	}
+        });
+        setInterval(function(){ 
+        	var frontline =0;
+ 			var backline =0;
+ 			jQuery(".back-line").each(function(){
+ 				var value = jQuery(this).val();
+ 				if (value != "") {
+ 					backline = 1;
+ 					return false;
+ 				}
+ 			});
+ 			jQuery(".front-line").each(function(){
+ 				var value = jQuery(this).val();
+ 				if (value != "") {
+ 					frontline = 1;
+ 					return false;
+ 				}
+ 			});
+	        if (frontline != 0) {
+	        	jQuery('div.woo-complex-prod-variants span.front-text').text('Completed');
+	        }else{
+	        	jQuery('div.woo-complex-prod-variants span.front-text').text('Not Completed');
+	        }
+	        if (backline != 0) {
+	        	jQuery('div.woo-complex-prod-variants span.back-text').text('Completed');
+	        }else{
+	        	jQuery('div.woo-complex-prod-variants span.back-text').text('Not Completed');
+	        }
+        }, 1000);*/
+    });
+    </script>
+<?php if ($product->get_id() == 6089 || $product->get_id() == 7722) { ?>
+<script type="text/javascript">
+jQuery(document).ready(function(){
+	var backimage = jQuery("#picker_pa_ttype .select-option.swatch-wrapper.selected").attr('data-value');
+	
+	var frontimage = jQuery("#picker_pa_style .select-option.swatch-wrapper.selected a img").attr('src');
+	if (frontimage != undefined ) {
+		jQuery(".show_img img.front_img").attr('src',frontimage);
+	}else{
+		frontimage = jQuery("#picker_pa_style div").first().find("a img").attr('src');
+		jQuery(".show_img img.front_img").attr('src',frontimage);
+	}
+	jQuery(".show_img img.back_img").attr('src','<?php echo get_template_directory_uri(); ?>'+'-child/images/back/'+backimage+'-back.png');
+	
+	jQuery("#picker_pa_style .select-option.swatch-wrapper").on('click',function(){
+		var backimage = jQuery("#picker_pa_ttype .select-option.swatch-wrapper.selected").attr('data-value');
+
+		var frontimage = jQuery(this).find("a img").attr('src');
+		// remove previous class
+		var lastClass = jQuery('.show_img .section-front-image').attr('class').split(' ').pop();
+		var str = jQuery(this).attr('data-value');
+		var res = str.split("-");
+		jQuery('.show_img .section-front-image').removeClass(lastClass);
+		jQuery(".show_img .section-front-image").addClass(res[0]);
+
+		jQuery('.show_img .section-back-image').removeClass(lastClass);
+		jQuery(".show_img .section-back-image").addClass(res[0]);
+		//end remove previous class
+
+		jQuery(".show_img img.front_img").attr('src',frontimage);
+		jQuery(".show_img img.back_img").attr('src','<?php echo get_template_directory_uri(); ?>'+'-child/images/back/'+backimage+'-back.png');
+	});
+
+	
+});
+
+
+</script>
+<?php }elseif($product->get_id() == 6033 || $product->get_id() == 7659){ ?>
+<script type="text/javascript">
+jQuery(document).ready(function(){
+	var image = jQuery("#picker_pa_color .select-option.swatch-wrapper.selected").attr('data-value');
+	if (image != undefined ) {
+		jQuery(".show_img img").attr('src','<?php echo get_template_directory_uri(); ?>'+'-child/images/back/'+image+'-back.png');
+	}else{
+		image = jQuery("#picker_pa_color div").first().attr('data-value');
+		jQuery(".show_img img").attr('src','<?php echo get_template_directory_uri(); ?>'+'-child/images/back/'+image+'-back.png');
+	}
+        
+    jQuery("#picker_pa_color .select-option.swatch-wrapper").on('click',function(){
+    	// remove previous class
+    	var lastClass = jQuery('.show_img .section-front-image').attr('class').split(' ');
+		
+		var str = jQuery(this).attr('data-value');
+		var res = str.split("-");
+		jQuery('.show_img .section-front-image').removeClass(lastClass[2]);
+		jQuery(".show_img .section-front-image").addClass("Alu-"+res[1]);
+
+		jQuery('.show_img .section-back-image').removeClass(lastClass[2]);
+		jQuery(".show_img .section-back-image").addClass("Alu-"+res[1]);
+		//end remove previous class
+
+		var image = jQuery(this).attr('data-value');
+		jQuery(".show_img img").attr('src','<?php echo get_template_directory_uri(); ?>'+'-child/images/back/'+image+'-back.png');
+	});
+});
+</script>
+<?php } ?>
+
+
+<?php 
+if (isset($_POST['petName'])) { ?>
+	<script type="text/javascript">
+		jQuery(document).ready(function(){
+			jQuery(".select-option.swatch-wrapper").removeClass("selected");
+			jQuery("select#pa_shape option[value='<?php echo $_POST["type"]; ?>']").attr("selected", "selected");
+			jQuery(".select-option.swatch-wrapper[data-value='<?php echo $_POST["type"]; ?>").addClass('selected');
+			jQuery(".front_line1").text('<?php echo $_POST['petName']; ?>');
+			jQuery("#engraving_front_line_1").val('<?php echo $_POST['petName']; ?>');
+			var type = jQuery("#picker_pa_shape .select-option.swatch-wrapper.selected").attr('data-value');
+			console.log(type);
+			if (type == "heart") {
+				jQuery(".show_img img").attr('src','https://idtag.agiliscloud.com/wp-content/themes/salient-child/images/back/pink-heart-back.png');
+			} else if(type == "circle"){
+				jQuery(".show_img img").attr('src','https://idtag.agiliscloud.com/wp-content/themes/salient-child/images/back/blue-circle-back.png');
+			} else if(type == "bone"){
+				jQuery(".show_img img").attr('src','https://idtag.agiliscloud.com/wp-content/themes/salient-child/images/back/black-bone-back.png');
+			}
+
+		});
+	</script>
+<?php } ?>
+<script type="text/javascript">
+	jQuery(document).ready(function(){
+		var shape = jQuery('#picker_pa_shape div.select-option.selected a').attr('title');
+		jQuery("div.woo-complex-prod-variants span.shape").text(shape);
+		var color = jQuery('#picker_pa_color div.select-option.selected a').attr('title');
+		jQuery("div.woo-complex-prod-variants span.color").text(color);
+		var size = jQuery('#pa_size').val();
+		jQuery("div.woo-complex-prod-variants span.size").text(size);
+		var type = jQuery('#picker_pa_ttype div.select-option.selected a').attr('title');
+		jQuery("div.woo-complex-prod-variants span.type").text(type);
+		var style = jQuery('#picker_pa_style div.select-option.selected a').attr('title');
+		jQuery("div.woo-complex-prod-variants span.style").text(style);
+	});
+</script>
 <?php
 do_action( 'woocommerce_after_add_to_cart_form' );
